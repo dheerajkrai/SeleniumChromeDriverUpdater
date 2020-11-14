@@ -1,31 +1,35 @@
 import platform
 import requests
 import io
-import os
+import os, sys, getopt
 from subprocess import run, PIPE
 import json
-from pprint import pprint
 
 
 BASE_PATH = 'https://chromedriver.storage.googleapis.com'
+CONFIG_FILE_LOCATION = './config.json'
 config = {}
 
 
-def load_config(location='./config.json'):
+def load_config():
     global config
     
     #check if location exists
-    if not os.path.exists(location) or not os.path.isfile(location):
-        print('Unable to find config file at location [' + location + ']')
+    if not os.path.exists(CONFIG_FILE_LOCATION) or not os.path.isfile(CONFIG_FILE_LOCATION):
+        print('Unable to find config file at location [' + CONFIG_FILE_LOCATION + ']')
         exit(-1)
-
-    with open(location, 'r') as configfile:
+    print('Loading configuration from : ' + CONFIG_FILE_LOCATION)
+    with open(CONFIG_FILE_LOCATION, 'r') as configfile:
         config = json.load(configfile)
 
 
 def list_available_versions():
     file_path = get_download_location()
-    files = os.listdir(file_path)
+    files = []
+    try:
+        files = os.listdir(file_path)
+    except FileNotFoundError:
+        print('No such directory')
     return files
     
 
@@ -36,7 +40,10 @@ def get_download_location():
     
     if not os.path.exists(file_path):
         print('Download location not available, creating new directory.')
-        os.makedirs(file_path)
+        try:
+            os.makedirs(file_path)
+        except FileNotFoundError:
+            print('Unable to create directory. No such directory exist.')
     
     return file_path
 
@@ -94,14 +101,36 @@ def download_latest_chrome_driver():
         f.write(resp.content)
     
     print('Download complete. File available at [' + file_location + ']')
-
-
-if __name__ == '__main__':
-    print('Starting script : Chrome Driver Auto Update')
+    
+    
+def parse_args(args):
+    global CONFIG_FILE_LOCATION
+    try:
+      opts, argsv = getopt.getopt(args,"hc:",["config="])
+    except getopt.GetoptError:
+        print ('Usage : main.py -c </path/to/config/file>')
+        sys.exit(2)
+    
+    for opt, arg in opts:
+        if opt == '-h':
+            print ('Usage : main.py -c </path/to/config/file>')
+            sys.exit()
+        elif opt in ("-c", "--config"):
+            CONFIG_FILE_LOCATION = str(arg)      
+        
+    
+def main(args):
+    parse_args(args)
     load_config()
+    print('Starting script : Chrome Driver Auto Update')
     if config is None or len(config) == 0:
         print('Application config not set up!')
         exit(1)
     download_latest_chrome_driver()
     print('Done!')
+        
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
     
