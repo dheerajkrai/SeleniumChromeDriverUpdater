@@ -1,4 +1,4 @@
-import os
+import os, sys
 import platform
 import requests
 from subprocess import run, PIPE
@@ -22,12 +22,16 @@ def get_download_location():
     if file_path is None:
         file_path = ''
     
+    if len(file_path) > 0 and not (file_path[-1:] == '/'):
+        file_path = file_path + '/'
+    
     if not os.path.exists(file_path):
         print('Download location not available, creating new directory.')
         try:
             os.makedirs(file_path)
         except FileNotFoundError:
-            print('Unable to create directory. No such directory exist.')
+            print('Unable to create directory. No such path exist.')
+            sys.exit(1)
     
     return file_path
 
@@ -71,7 +75,7 @@ def download_latest_chrome_driver(configfile):
         print('Downloading disabled in script configuration. exiting...')
         return
     if check_if_driver_already_exists(driver_version + '.zip'):
-        print('Version [' + driver_version + '] already exists, skipping download.')
+        print('Version [' + driver_version + '] already exists at location [' + get_download_location() + '], skipping download.')
         return
     
     file_location = get_download_location() +  driver_version + '.zip'
